@@ -44,6 +44,31 @@ class MoodleClient:
         
         logger.info(f"MoodleClient inicializado para: {self.url}")
     
+    def check_connection(self) -> Dict[str, Any]:
+        """
+        Verifica a conectividade com o Moodle.
+        
+        Returns:
+            Dict com status da conexão
+        """
+        try:
+            # Tenta fazer uma chamada simples para verificar a conexão
+            result = self._make_request('core_webservice_get_site_info')
+            
+            return {
+                'status': 'connected',
+                'site_name': result.get('sitename', 'Unknown'),
+                'moodle_version': result.get('release', 'Unknown'),
+                'available': True
+            }
+        except Exception as e:
+            logger.warning(f"Falha na conexão com Moodle: {str(e)}")
+            return {
+                'status': 'disconnected',
+                'error': str(e),
+                'available': False
+            }
+    
     def _make_request(self, function: str, **params) -> Dict[str, Any]:
         """
         Faz requisição para API do Moodle.

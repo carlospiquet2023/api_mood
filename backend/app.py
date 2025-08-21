@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
 
-from flask import Flask, request, jsonify, send_file, render_template, send_from_directory
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
@@ -67,7 +67,7 @@ def index():
     """Página principal da aplicação."""
     try:
         logger.info("Acesso à página principal")
-        return render_template('index.html')
+        return send_from_directory('static', 'index.html')
     except Exception as e:
         logger.error(f"Erro ao carregar página principal: {str(e)}")
         return jsonify({'error': 'Erro interno do servidor'}), 500
