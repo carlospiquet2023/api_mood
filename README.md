@@ -2,8 +2,65 @@
 
 Sistema profissional para automatização de diplomas com validação via QR Code integrado ao Moodle.
 
-**Desenvolvido por:** Carlos Antonio de Oliveira Piquet  
-**Email:** carlospiquet.projetos@gmail.com  
+**Desenvolvido por:** Carlos Antonio de Oliv## 📄 Documentação Legal
+
+Este projeto possui documentação legal completa e robusta:
+
+### 🔒 Licença e Proteção
+- **[LICENSE.md](./LICENSE.md)** - Licença proprietária com proteção de propriedade intelectual
+- **[PRIVACY_POLICY.md](./PRIVACY_POLICY.md)** - Política de privacidade conforme LGPD/GDPR
+- **[TERMS_OF_USE.md](./TERMS_OF_USE.md)** - Termos de uso e condições gerais
+
+### ⚖️ Proteções Implementadas
+- ✅ **Direitos Autorais** protegidos por lei
+- ✅ **Anti-Plágio** com marcas d'água digitais
+- ✅ **LGPD/GDPR** compliance total
+- ✅ **ISO 27001/27701** conformidade
+- ✅ **Penalidades** por uso não autorizado
+- ✅ **Monitoramento** de violações 24/7
+
+### 🚨 Aviso Legal
+**Este software é propriedade exclusiva de Carlos Antonio de Oliveira Piquet.**  
+Qualquer uso não autorizado, apropriação ou distribuição sem permissão constitui violação de direitos autorais e está sujeito a penalidades legais conforme descrito na licença.
+
+## 🤝 Contribuições
+
+Para contribuir com o projeto:
+1. Leia os [Termos de Uso](./TERMS_OF_USE.md)
+2. Entre em contato para autorização prévia
+3. Assine acordo de confidencialidade se necessário
+4. Fork autorizado do projeto
+5. Implemente melhorias com documentação
+6. Submeta Pull Request para revisão
+
+**Nota:** Contribuições serão creditadas, mas os direitos autorais permanecem com o autor original.
+
+## 📞 Suporte e Licenciamento
+
+### 💬 Suporte Técnico
+- **Email:** carlospiquet.projetos@gmail.com
+- **WhatsApp:** +55 21 977434614
+- **Documentação:** Veja arquivos INSTRUCOES.md e TROUBLESHOOTING.md
+- **Issues:** GitHub Issues para bugs confirmados
+
+### 💼 Licenciamento Comercial
+Para uso comercial, integração em produtos proprietários ou licenças especiais:
+- **Contato direto:** carlospiquet.projetos@gmail.com
+- **Licenças disponíveis:** Educacional, Comercial, Enterprise
+- **Suporte:** Desde básico até dedicado 24/7
+- **Customizações:** Desenvolvimento sob demanda
+
+## 🏆 Créditos e Reconhecimentos
+
+**Autor Original e Proprietário:**  
+Carlos Antonio de Oliveira Piquet
+- Especialista em Sistemas Educacionais
+- Desenvolvedor Full Stack
+- Expert em Integração Moodle
+- Consultor em Proteção de Dados
+
+**Localização:** Rio de Janeiro, RJ - Brasil  
+**Ano:** 2025mail:** carlospiquet.projetos@gmail.com  
 **Contato:** +55 21 977434614  
 **Especialista em sistemas educacionais e automação**
 
