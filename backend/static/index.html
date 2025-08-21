@@ -1,0 +1,926 @@
+<!--
+Sistema Automatizador de Diplomas
+Desenvolvido por: Carlos Antonio de Oliveira Piquet
+Email: carlospiquet.projetos@gmail.com
+Contato: +55 21 977434614
+Sistema integrado com Moodle para automação de diplomas
+-->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Automatizador de Diplomas - Profissional</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- PDF.js -->
+    <script src="https://mozilla.github.io/pdf.js/build/pdf.mjs" type="module"></script>
+    
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Configuração do Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        },
+                        success: {
+                            500: '#10b981',
+                            600: '#059669',
+                        },
+                        warning: {
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        danger: {
+                            500: '#ef4444',
+                            600: '#dc2626',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        /* Estilos customizados para o PDF viewer */
+        #pdf-viewer {
+            position: relative;
+            cursor: crosshair;
+            border: 2px dashed #e5e7eb;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            background: #f9fafb;
+        }
+        
+        #pdf-viewer:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        
+        #pdf-viewer.active {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+        
+        #pdf-canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        #qr-marker {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: rgba(59, 130, 246, 0.3);
+            border: 3px solid #3b82f6;
+            border-radius: 8px;
+            display: none;
+            pointer-events: none;
+            box-sizing: border-box;
+            animation: pulse 2s infinite;
+        }
+        
+        #qr-marker::before {
+            content: 'QR';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #1d4ed8;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        /* Loader profissional */
+        .loader {
+            border: 4px solid #f3f4f6;
+            border-radius: 50%;
+            border-top: 4px solid #3b82f6;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Estilos para upload drag & drop */
+        .upload-area {
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area.dragover {
+            background: #eff6ff;
+            border-color: #3b82f6;
+            transform: scale(1.02);
+        }
+        
+        /* Progress bar */
+        .progress-bar {
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+            height: 4px;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        
+        /* Notificações */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+            padding: 16px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        
+        .notification.success { background: #10b981; }
+        .notification.error { background: #ef4444; }
+        .notification.warning { background: #f59e0b; }
+        .notification.info { background: #3b82f6; }
+        
+        /* Responsividade aprimorada */
+        @media (max-width: 768px) {
+            #pdf-viewer {
+                max-height: 60vh;
+                overflow: auto;
+            }
+            
+            .notification {
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen font-sans">
+    <!-- Header profissional -->
+    <header class="bg-white shadow-lg border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-primary-500 p-2 rounded-lg">
+                        <i class="fas fa-graduation-cap text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-900">Sistema Automatizador de Diplomas</h1>
+                        <p class="text-sm text-gray-500">Versão 1.0.0 - Integração Moodle</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div id="status-indicator" class="flex items-center space-x-2">
+                        <div class="w-3 h-3 bg-gray-400 rounded-full animate-pulse"></div>
+                        <span class="text-sm text-gray-600">Verificando conexão...</span>
+                    </div>
+                    
+                    <button id="help-button" class="p-2 text-gray-400 hover:text-primary-500 transition-colors">
+                        <i class="fas fa-question-circle text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Container principal -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Progress indicator -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+                <span>Progresso</span>
+                <span id="progress-text">Aguardando upload</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div id="progress-bar" class="progress-bar w-0"></div>
+            </div>
+        </div>
+
+        <!-- Etapa 1: Upload do arquivo -->
+        <div id="upload-step" class="bg-white rounded-xl shadow-lg p-8 mb-8 animate-fade-in">
+            <div class="text-center mb-6">
+                <div class="mx-auto w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-cloud-upload-alt text-primary-500 text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Upload do Arquivo ZIP</h2>
+                <p class="text-gray-600">Faça o upload do arquivo ZIP contendo os diplomas em PDF para processamento automático</p>
+            </div>
+
+            <div id="upload-area" class="upload-area border-2 border-dashed border-gray-300 rounded-xl p-12 text-center bg-gray-50 hover:bg-gray-100 transition-all cursor-pointer">
+                <input type="file" id="zip-upload" accept=".zip" class="hidden">
+                
+                <div id="upload-content">
+                    <i class="fas fa-file-archive text-4xl text-gray-400 mb-4"></i>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Arraste o arquivo ZIP aqui</h3>
+                    <p class="text-gray-500 mb-4">ou clique para selecionar</p>
+                    <button id="upload-button" class="bg-primary-500 hover:bg-primary-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-lg hover:shadow-xl">
+                        <i class="fas fa-folder-open mr-2"></i>
+                        Selecionar Arquivo
+                    </button>
+                </div>
+                
+                <div id="upload-progress" class="hidden">
+                    <div class="loader mx-auto mb-4"></div>
+                    <p class="text-primary-600 font-medium">Processando arquivo...</p>
+                </div>
+            </div>
+
+            <div id="file-info" class="hidden mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-file-archive text-blue-500"></i>
+                    <div class="flex-1">
+                        <p id="file-name" class="font-medium text-blue-900">arquivo.zip</p>
+                        <p id="file-details" class="text-sm text-blue-600">Tamanho: 0 MB | PDFs encontrados: 0</p>
+                    </div>
+                    <button id="remove-file" class="text-red-500 hover:text-red-700 transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Etapa 2: Seleção da posição do QR Code -->
+        <div id="position-step" class="hidden bg-white rounded-xl shadow-lg p-8 mb-8 animate-slide-up">
+            <div class="text-center mb-6">
+                <div class="mx-auto w-16 h-16 bg-success-100 rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-crosshairs text-success-500 text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Posicionamento do QR Code</h2>
+                <p class="text-gray-600">Clique no diploma abaixo para definir onde o QR Code será inserido em todos os documentos</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Viewer do PDF -->
+                <div class="lg:col-span-3">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-gray-700">Preview do Primeiro Diploma</h3>
+                            <div class="flex items-center space-x-2 text-sm text-gray-500">
+                                <i class="fas fa-mouse-pointer"></i>
+                                <span>Clique para posicionar</span>
+                            </div>
+                        </div>
+                        
+                        <div id="pdf-viewer" class="max-h-96 overflow-auto">
+                            <canvas id="pdf-canvas"></canvas>
+                            <div id="qr-marker"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel de controle -->
+                <div class="lg:col-span-1">
+                    <div class="bg-gray-50 rounded-lg p-4 sticky top-4">
+                        <h3 class="font-semibold text-gray-700 mb-4">Configurações</h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Tamanho do QR Code</label>
+                                <select id="qr-size" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                                    <option value="60">Pequeno (60px)</option>
+                                    <option value="80" selected>Médio (80px)</option>
+                                    <option value="100">Grande (100px)</option>
+                                    <option value="120">Extra Grande (120px)</option>
+                                </select>
+                            </div>
+                            
+                            <div id="position-info" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Posição Selecionada</label>
+                                <div class="bg-white p-3 rounded border text-sm">
+                                    <div class="flex justify-between">
+                                        <span>X:</span>
+                                        <span id="pos-x">-</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Y:</span>
+                                        <span id="pos-y">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="pt-4 border-t border-gray-200">
+                                <button id="reset-position" class="w-full mb-3 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                                    <i class="fas fa-undo mr-2"></i>
+                                    Resetar Posição
+                                </button>
+                                
+                                <button id="process-button" class="w-full bg-success-500 hover:bg-success-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors shadow-lg hover:shadow-xl disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                                    <i class="fas fa-cogs mr-2"></i>
+                                    Processar Diplomas
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Etapa 3: Processamento -->
+        <div id="processing-step" class="hidden bg-white rounded-xl shadow-lg p-8 mb-8 text-center animate-slide-up">
+            <div class="mx-auto w-16 h-16 bg-warning-100 rounded-full flex items-center justify-center mb-6">
+                <div class="loader"></div>
+            </div>
+            
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Processando Diplomas</h2>
+            <p id="processing-message" class="text-gray-600 mb-6">Iniciando processamento dos diplomas...</p>
+            
+            <div class="max-w-md mx-auto">
+                <div class="bg-gray-200 rounded-full h-3 mb-4">
+                    <div id="processing-progress" class="bg-warning-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <p id="processing-status" class="text-sm text-gray-500">Aguarde...</p>
+            </div>
+            
+            <div id="processing-details" class="mt-8 text-left bg-gray-50 rounded-lg p-4 max-h-32 overflow-y-auto">
+                <h4 class="font-medium text-gray-700 mb-2">Log de Processamento:</h4>
+                <div id="processing-log" class="text-sm text-gray-600 space-y-1">
+                    <!-- Logs serão inseridos aqui -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Etapa 4: Download -->
+        <div id="download-step" class="hidden bg-white rounded-xl shadow-lg p-8 text-center animate-slide-up">
+            <div class="mx-auto w-16 h-16 bg-success-100 rounded-full flex items-center justify-center mb-6">
+                <i class="fas fa-check-circle text-success-500 text-3xl"></i>
+            </div>
+            
+            <h2 class="text-2xl font-bold text-success-600 mb-2">Processamento Concluído!</h2>
+            <p class="text-gray-600 mb-6">Todos os diplomas foram processados com sucesso e estão prontos para download</p>
+            
+            <div id="results-summary" class="bg-success-50 rounded-lg p-6 mb-6 text-left">
+                <h3 class="font-semibold text-success-800 mb-3">Resumo do Processamento</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-success-600" id="total-processed">0</div>
+                        <div class="text-success-700">Diplomas Processados</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-success-600" id="total-qr-codes">0</div>
+                        <div class="text-success-700">QR Codes Gerados</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-success-600" id="processing-time">0s</div>
+                        <div class="text-success-700">Tempo de Processamento</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a id="download-link" class="inline-flex items-center px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-lg transition-colors shadow-lg hover:shadow-xl">
+                    <i class="fas fa-download mr-2"></i>
+                    Baixar Diplomas Processados
+                </a>
+                
+                <button id="new-processing" class="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold rounded-lg transition-colors">
+                    <i class="fas fa-plus mr-2"></i>
+                    Processar Novo Lote
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de ajuda -->
+    <div id="help-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-2xl w-full max-h-96 overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-gray-900">Ajuda - Como Usar</h3>
+                    <button id="close-help" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4 text-sm text-gray-600">
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-2">1. Upload do Arquivo</h4>
+                        <p>Faça upload de um arquivo ZIP contendo os diplomas em formato PDF. O sistema irá extrair e validar automaticamente os arquivos.</p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-2">2. Posicionamento do QR Code</h4>
+                        <p>Clique na posição exata onde deseja que o QR Code apareça em todos os diplomas. Use o primeiro diploma como referência.</p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-2">3. Processamento Automático</h4>
+                        <p>O sistema irá processar cada diploma, extrair o nome do estudante, buscar dados no Moodle e inserir o QR Code personalizado.</p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-2">4. Download dos Resultados</h4>
+                        <p>Baixe o arquivo ZIP com todos os diplomas processados e os QR Codes inseridos.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container para notificações -->
+    <div id="notifications"></div>
+
+    <!-- JavaScript principal -->
+    <script type="module">
+        import { ApplicationController } from './js/app.js';
+        
+        // Inicializar aplicação quando DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = new ApplicationController();
+            app.initialize();
+        });
+    </script>
+    
+    <!-- JavaScript inline para funcionalidades básicas -->
+    <script type="module">
+        const { pdfjsLib } = globalThis;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://mozilla.github.io/pdf.js/build/pdf.worker.mjs`;
+
+        // Classe principal da aplicação
+        class DiplomaAutomator {
+            constructor() {
+                this.sessionId = null;
+                this.pdfCoordinates = null;
+                this.originalPdfSize = { width: 0, height: 0 };
+                this.processingStartTime = null;
+                
+                this.initializeElements();
+                this.bindEvents();
+                this.checkSystemStatus();
+            }
+
+            initializeElements() {
+                // Elementos das etapas
+                this.uploadStep = document.getElementById('upload-step');
+                this.positionStep = document.getElementById('position-step');
+                this.processingStep = document.getElementById('processing-step');
+                this.downloadStep = document.getElementById('download-step');
+                
+                // Elementos de upload
+                this.uploadArea = document.getElementById('upload-area');
+                this.zipUpload = document.getElementById('zip-upload');
+                this.uploadButton = document.getElementById('upload-button');
+                this.fileInfo = document.getElementById('file-info');
+                this.fileName = document.getElementById('file-name');
+                this.fileDetails = document.getElementById('file-details');
+                this.removeFile = document.getElementById('remove-file');
+                
+                // Elementos de posicionamento
+                this.pdfViewer = document.getElementById('pdf-viewer');
+                this.pdfCanvas = document.getElementById('pdf-canvas');
+                this.qrMarker = document.getElementById('qr-marker');
+                this.qrSize = document.getElementById('qr-size');
+                this.positionInfo = document.getElementById('position-info');
+                this.processButton = document.getElementById('process-button');
+                this.resetPosition = document.getElementById('reset-position');
+                
+                // Elementos de processamento
+                this.processingMessage = document.getElementById('processing-message');
+                this.processingProgress = document.getElementById('processing-progress');
+                this.processingStatus = document.getElementById('processing-status');
+                this.processingLog = document.getElementById('processing-log');
+                
+                // Elementos de download
+                this.downloadLink = document.getElementById('download-link');
+                this.newProcessing = document.getElementById('new-processing');
+                this.totalProcessed = document.getElementById('total-processed');
+                this.totalQrCodes = document.getElementById('total-qr-codes');
+                this.processingTime = document.getElementById('processing-time');
+                
+                // Elementos de UI
+                this.progressBar = document.getElementById('progress-bar');
+                this.progressText = document.getElementById('progress-text');
+                this.statusIndicator = document.getElementById('status-indicator');
+                this.helpButton = document.getElementById('help-button');
+                this.helpModal = document.getElementById('help-modal');
+                this.closeHelp = document.getElementById('close-help');
+            }
+
+            bindEvents() {
+                // Upload events
+                this.uploadButton.addEventListener('click', () => this.zipUpload.click());
+                this.uploadArea.addEventListener('click', () => this.zipUpload.click());
+                this.zipUpload.addEventListener('change', (e) => this.handleFileUpload(e));
+                this.removeFile.addEventListener('click', () => this.resetUpload());
+                
+                // Drag & drop
+                this.uploadArea.addEventListener('dragover', (e) => this.handleDragOver(e));
+                this.uploadArea.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+                this.uploadArea.addEventListener('drop', (e) => this.handleFileDrop(e));
+                
+                // Position events
+                this.pdfViewer.addEventListener('click', (e) => this.handlePdfClick(e));
+                this.qrSize.addEventListener('change', () => this.updateQrMarkerSize());
+                this.resetPosition.addEventListener('click', () => this.resetQrPosition());
+                this.processButton.addEventListener('click', () => this.processFiles());
+                
+                // Download events
+                this.newProcessing.addEventListener('click', () => this.startNewProcessing());
+                
+                // UI events
+                this.helpButton.addEventListener('click', () => this.showHelp());
+                this.closeHelp.addEventListener('click', () => this.hideHelp());
+                this.helpModal.addEventListener('click', (e) => {
+                    if (e.target === this.helpModal) this.hideHelp();
+                });
+            }
+
+            async checkSystemStatus() {
+                try {
+                    const response = await fetch('/api/health');
+                    const status = await response.json();
+                    
+                    this.updateStatusIndicator(status.status === 'healthy', status.services);
+                } catch (error) {
+                    this.updateStatusIndicator(false);
+                }
+            }
+
+            updateStatusIndicator(isHealthy, services = {}) {
+                const indicator = this.statusIndicator.querySelector('div');
+                const text = this.statusIndicator.querySelector('span');
+                
+                if (isHealthy) {
+                    indicator.className = 'w-3 h-3 bg-success-500 rounded-full';
+                    text.textContent = 'Sistema online';
+                } else {
+                    indicator.className = 'w-3 h-3 bg-danger-500 rounded-full animate-pulse';
+                    text.textContent = 'Sistema indisponível';
+                }
+            }
+
+            // Upload handlers
+            handleDragOver(e) {
+                e.preventDefault();
+                this.uploadArea.classList.add('dragover');
+            }
+
+            handleDragLeave(e) {
+                e.preventDefault();
+                this.uploadArea.classList.remove('dragover');
+            }
+
+            handleFileDrop(e) {
+                e.preventDefault();
+                this.uploadArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.zipUpload.files = files;
+                    this.handleFileUpload({ target: { files } });
+                }
+            }
+
+            async handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                this.showNotification('Upload iniciado...', 'info');
+                this.updateProgress(10, 'Validando arquivo...');
+                
+                try {
+                    // Mostrar informações do arquivo
+                    this.fileName.textContent = file.name;
+                    this.fileDetails.textContent = `Tamanho: ${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+                    this.fileInfo.classList.remove('hidden');
+                    
+                    // Fazer upload
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    this.showUploadProgress();
+                    this.updateProgress(30, 'Enviando arquivo...');
+
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Erro no upload');
+                    }
+
+                    this.sessionId = result.session_id;
+                    this.updateProgress(70, 'Processando ZIP...');
+                    
+                    // Atualizar detalhes do arquivo
+                    this.fileDetails.textContent = `Tamanho: ${(file.size / (1024 * 1024)).toFixed(1)} MB | PDFs encontrados: ${result.total_files}`;
+                    
+                    // Renderizar primeiro PDF
+                    await this.renderFirstPdf(result.first_pdf_b64);
+                    
+                    this.updateProgress(100, 'Upload concluído');
+                    this.showNotification(`Upload concluído! ${result.total_files} diplomas encontrados.`, 'success');
+                    
+                    // Avançar para próxima etapa
+                    setTimeout(() => {
+                        this.showPositionStep();
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('Erro no upload:', error);
+                    this.showNotification(`Erro: ${error.message}`, 'error');
+                    this.resetUpload();
+                }
+            }
+
+            showUploadProgress() {
+                document.getElementById('upload-content').classList.add('hidden');
+                document.getElementById('upload-progress').classList.remove('hidden');
+            }
+
+            resetUpload() {
+                this.zipUpload.value = '';
+                this.fileInfo.classList.add('hidden');
+                document.getElementById('upload-content').classList.remove('hidden');
+                document.getElementById('upload-progress').classList.add('hidden');
+                this.updateProgress(0, 'Aguardando upload');
+            }
+
+            async renderFirstPdf(base64Data) {
+                try {
+                    const pdfData = atob(base64Data);
+                    const pdfBytes = new Uint8Array(pdfData.length);
+                    for (let i = 0; i < pdfData.length; i++) {
+                        pdfBytes[i] = pdfData.charCodeAt(i);
+                    }
+
+                    const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+                    const pdf = await loadingTask.promise;
+                    const page = await pdf.getPage(1);
+
+                    const viewport = page.getViewport({ scale: 1.2 });
+                    this.originalPdfSize.width = page.view[2];
+                    this.originalPdfSize.height = page.view[3];
+
+                    const context = this.pdfCanvas.getContext('2d');
+                    this.pdfCanvas.height = viewport.height;
+                    this.pdfCanvas.width = viewport.width;
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport,
+                    };
+
+                    await page.render(renderContext).promise;
+                    
+                } catch (error) {
+                    console.error('Erro ao renderizar PDF:', error);
+                    this.showNotification('Erro ao carregar preview do PDF', 'error');
+                }
+            }
+
+            // Position handlers
+            handlePdfClick(event) {
+                const rect = this.pdfCanvas.getBoundingClientRect();
+                const canvasX = event.clientX - rect.left;
+                const canvasY = event.clientY - rect.top;
+
+                const scale = this.pdfCanvas.width / this.originalPdfSize.width;
+                const pointX = canvasX / scale;
+                const pointY = canvasY / scale;
+
+                // Coordenada Y do PDF (origem inferior esquerda)
+                const pdfY = this.originalPdfSize.height - pointY;
+
+                this.pdfCoordinates = { x: pointX, y: pdfY };
+                
+                this.updateQrMarkerPosition(canvasX, canvasY);
+                this.updatePositionInfo();
+                this.processButton.disabled = false;
+                this.pdfViewer.classList.add('active');
+                
+                this.showNotification('Posição selecionada com sucesso!', 'success');
+            }
+
+            updateQrMarkerPosition(x, y) {
+                const size = parseInt(this.qrSize.value);
+                this.qrMarker.style.left = `${x - size / 2}px`;
+                this.qrMarker.style.top = `${y - size / 2}px`;
+                this.qrMarker.style.width = `${size}px`;
+                this.qrMarker.style.height = `${size}px`;
+                this.qrMarker.style.display = 'block';
+            }
+
+            updateQrMarkerSize() {
+                if (this.pdfCoordinates && this.qrMarker.style.display === 'block') {
+                    // Recalcular posição com novo tamanho
+                    const rect = this.pdfCanvas.getBoundingClientRect();
+                    const scale = this.pdfCanvas.width / this.originalPdfSize.width;
+                    const canvasX = this.pdfCoordinates.x * scale;
+                    const canvasY = (this.originalPdfSize.height - this.pdfCoordinates.y) * scale;
+                    
+                    this.updateQrMarkerPosition(canvasX, canvasY);
+                }
+            }
+
+            updatePositionInfo() {
+                if (this.pdfCoordinates) {
+                    document.getElementById('pos-x').textContent = Math.round(this.pdfCoordinates.x);
+                    document.getElementById('pos-y').textContent = Math.round(this.pdfCoordinates.y);
+                    this.positionInfo.classList.remove('hidden');
+                }
+            }
+
+            resetQrPosition() {
+                this.pdfCoordinates = null;
+                this.qrMarker.style.display = 'none';
+                this.positionInfo.classList.add('hidden');
+                this.processButton.disabled = true;
+                this.pdfViewer.classList.remove('active');
+            }
+
+            // Processing
+            async processFiles() {
+                if (!this.sessionId || !this.pdfCoordinates) {
+                    this.showNotification('Erro: Dados de sessão ou coordenadas não encontrados', 'error');
+                    return;
+                }
+
+                this.processingStartTime = Date.now();
+                this.showProcessingStep();
+                this.updateProgress(0, 'Iniciando processamento...');
+
+                try {
+                    const requestData = {
+                        session_id: this.sessionId,
+                        qr_coords: this.pdfCoordinates,
+                        qr_size: parseInt(this.qrSize.value)
+                    };
+
+                    this.addProcessingLog('Enviando dados para processamento...');
+                    this.updateProcessingProgress(10);
+
+                    const response = await fetch('/api/process-files', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestData),
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Erro no processamento');
+                    }
+
+                    this.addProcessingLog('Criando arquivo ZIP...');
+                    this.updateProcessingProgress(90);
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    
+                    this.downloadLink.href = url;
+                    this.downloadLink.download = `diplomas_processados_${this.sessionId}.zip`;
+
+                    this.addProcessingLog('Processamento concluído com sucesso!');
+                    this.updateProcessingProgress(100);
+
+                    // Calcular tempo de processamento
+                    const processingDuration = Math.round((Date.now() - this.processingStartTime) / 1000);
+                    
+                    setTimeout(() => {
+                        this.showDownloadStep(processingDuration);
+                        this.updateProgress(100, 'Processamento concluído');
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('Erro no processamento:', error);
+                    this.addProcessingLog(`Erro: ${error.message}`);
+                    this.showNotification(`Erro no processamento: ${error.message}`, 'error');
+                }
+            }
+
+            addProcessingLog(message) {
+                const logEntry = document.createElement('div');
+                logEntry.className = 'text-gray-600';
+                logEntry.innerHTML = `<i class="fas fa-circle text-xs text-blue-500 mr-2"></i>${message}`;
+                this.processingLog.appendChild(logEntry);
+                this.processingLog.scrollTop = this.processingLog.scrollHeight;
+            }
+
+            updateProcessingProgress(percent) {
+                this.processingProgress.style.width = `${percent}%`;
+                this.processingStatus.textContent = `${percent}% concluído`;
+            }
+
+            // Step navigation
+            showPositionStep() {
+                this.uploadStep.classList.add('hidden');
+                this.positionStep.classList.remove('hidden');
+                this.updateProgress(25, 'Selecione a posição do QR Code');
+            }
+
+            showProcessingStep() {
+                this.positionStep.classList.add('hidden');
+                this.processingStep.classList.remove('hidden');
+                this.updateProgress(50, 'Processando diplomas...');
+            }
+
+            showDownloadStep(processingTime) {
+                this.processingStep.classList.add('hidden');
+                this.downloadStep.classList.remove('hidden');
+                
+                // Atualizar resumo (valores simulados - em produção viriam da API)
+                this.totalProcessed.textContent = '15'; // Exemplo
+                this.totalQrCodes.textContent = '15';   // Exemplo  
+                this.processingTime.textContent = `${processingTime}s`;
+                
+                this.updateProgress(100, 'Concluído com sucesso');
+            }
+
+            startNewProcessing() {
+                // Reset da aplicação
+                this.sessionId = null;
+                this.pdfCoordinates = null;
+                this.resetUpload();
+                this.resetQrPosition();
+                
+                // Voltar para primeira etapa
+                this.downloadStep.classList.add('hidden');
+                this.uploadStep.classList.remove('hidden');
+                
+                this.updateProgress(0, 'Aguardando upload');
+            }
+
+            // Utility methods
+            updateProgress(percent, text) {
+                this.progressBar.style.width = `${percent}%`;
+                this.progressText.textContent = text;
+            }
+
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span>${message}</span>
+                        <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                
+                document.getElementById('notifications').appendChild(notification);
+                
+                // Auto remove após 5 segundos
+                setTimeout(() => {
+                    if (notification.parentElement) {
+                        notification.remove();
+                    }
+                }, 5000);
+            }
+
+            showHelp() {
+                this.helpModal.classList.remove('hidden');
+            }
+
+            hideHelp() {
+                this.helpModal.classList.add('hidden');
+            }
+        }
+
+        // Inicializar aplicação
+        const app = new DiplomaAutomator();
+    </script>
+</body>
+</html>
